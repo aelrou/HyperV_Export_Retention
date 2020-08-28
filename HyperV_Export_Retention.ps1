@@ -10,14 +10,10 @@ if ($KeepGroups) {
         if ($Machine) {
             if ($Repository) {
                 $Stop = $false
-            }
-            else {Write-Host "-Repository directory is required"}
-        }
-        else {Write-Host "-Machine name is required"}
-    }
-    else {Write-Host "-KeepGroups must be greater than zero"}
-}
-else {Write-Host "-KeepGroups number is required"}
+            } else {Write-Host "-Repository directory is required"}
+        } else {Write-Host "-Machine name is required"}
+    } else {Write-Host "-KeepGroups must be greater than zero"}
+} else {Write-Host "-KeepGroups number is required"}
 
 if ($Stop) {
     Write-Host "CMD> ""powershell.exe"" -File ""C:\HyperV_Export_Retention.ps1"" -KeepGroups 3 -Machine ""VMName"" -Repository ""C:\Repository\VMName"""
@@ -39,7 +35,7 @@ if (!(Test-Path -Path "$($LogDir)\$($LogFile)" -PathType Leaf)) {
 }
 Function LogWrite {
     Param ([string]$LogString)
-    Add-content $LogDir"\"$LogFile -value $LogString
+    Add-content "$($LogDir)\$($LogFile)" -value $LogString
     Write-Host $LogString
 }
 
@@ -71,12 +67,12 @@ foreach ($i in $FilesNames.GetEnumerator()) {
 LogWrite("Matched files in ""$($Repository)"" for -Machine ""$($Machine)""")
 
 $SortedFileGroupDictionary = @{}
-$Count = 1
+$Count = 0
 foreach ($i in $FileGroupDictionary.GetEnumerator() | Sort-Object -Property key -Descending) {
-    $SortedFileGroupDictionary.Add($Count,$i.Key)
+    $SortedFileGroupDictionary.Add($Count+1,$i.Key)
     $Count++
 }
-LogWrite("Found $($Count-1) groups of files")
+LogWrite("Found $($Count) groups of files")
 
 foreach ($i in $SortedFileGroupDictionary.GetEnumerator()) {
     if ($i.Key -gt $KeepGroups) {
@@ -84,7 +80,7 @@ foreach ($i in $SortedFileGroupDictionary.GetEnumerator()) {
         foreach ($i2 in $FilesNames.GetEnumerator()) {
             if ($i2 -match $i.Value) {
                 try {
-                    Remove-Item -Path $Repository"\"$i2
+                    Remove-Item -Path "$($Repository)\$($i2)"
                     LogWrite("Deleted file """, $Repository, "\", $i2, """" -join "")
                 }
                 catch {
@@ -93,9 +89,7 @@ foreach ($i in $SortedFileGroupDictionary.GetEnumerator()) {
                 }
             }
         }
-    } else {
-        LogWrite("Keep group ", $i.Value -join "")
-    }
+    } else {LogWrite("Keep group ", $i.Value -join "")}
 }
 $DateTimeStop = Get-Date -format "yyyy-MM-dd-THHmm"
 LogWrite("Done. ", $DateTimeStop -join "")

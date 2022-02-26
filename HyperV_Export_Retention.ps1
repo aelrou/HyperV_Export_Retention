@@ -1,8 +1,9 @@
 # Set-ExecutionPolicy RemoteSigned
+# Unblock-File -Path "C:\HyperV_Export_Retention.ps1"
+# "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -File "C:\HyperV_Export_Retention.ps1"
 Param ([int]$KeepGroups,[string]$Machine,[string]$Repository)
-$DateTimeStart = Get-Date -format "yyyy-MM-dd-THHmm"
+
 $LogDir = "C:\Repository"
-$LogFile = "Retention.log"
 
 $Stop = $true
 if ($KeepGroups) {
@@ -21,10 +22,15 @@ if ($Stop) {
     Exit    
 }
 
+$FORMAT_ISO_8601 = "yyyy-MM-ddTHHmmss"
+$REGEX_ISO_8601 = "\d{4}-\d{2}-\d{2}T\d{2}\d{2}\d{2}"
+$DateTimeStart = Get-Date -format $FORMAT_ISO_8601
+$LogFile = "Retention.log"
+
 if (!(Test-Path -Path "$($LogDir)\$($LogFile)" -PathType Leaf)) {
     if (!(Test-Path -Path "$($LogDir)" -PathType Container)) {
         try {
-            New-Item -Path "$($LogDir)" -ItemType "directory"
+            New-Item -Path "$($LogDir)" -ItemType "directory" -ErrorAction Stop
         }
         catch {
             Write-Host($Error[0].Exception.GetType().FullName)
@@ -49,7 +55,8 @@ if (!(Test-Path -Path "$($Repository)" -PathType Container)) {
 $FilesNames = Get-ChildItem -Path $Repository -File -Name
 $FileGroupDictionary = @{}
 foreach ($i in $FilesNames.GetEnumerator()) {
-    if ($i -match "^$($Machine).?(\d{4}-\d{2}-\d{2}.?T\d{2}.?\d{2}.?\d*\.7z)(\.\d{3})?$") {
+    #if ($i -match "^$($Machine).?(\d{4}-\d{2}-\d{2}T\d{2}\d{2}\d{2}\.7z)(\.\d{3})?$") {
+    if ($i -match "^$($Machine).?($($REGEX_ISO_8601)\.7z)(\.\d{3})?$") {
         # $FileName = $Matches.0
         $FileGroup = $Matches.1
         try {
@@ -80,7 +87,7 @@ foreach ($i in $SortedFileGroupDictionary.GetEnumerator()) {
         foreach ($i2 in $FilesNames.GetEnumerator()) {
             if ($i2 -match $i.Value) {
                 try {
-                    Remove-Item -Path "$($Repository)\$($i2)"
+                    Remove-Item -Path "$($Repository)\$($i2)" -ErrorAction Stop
                     LogWrite("Deleted file """, $Repository, "\", $i2, """" -join "")
                 }
                 catch {
@@ -91,5 +98,5 @@ foreach ($i in $SortedFileGroupDictionary.GetEnumerator()) {
         }
     } else {LogWrite("Keep group ", $i.Value -join "")}
 }
-$DateTimeStop = Get-Date -format "yyyy-MM-dd-THHmm"
+$DateTimeStop = Get-Date -format $FORMAT_ISO_8601
 LogWrite("Done. ", $DateTimeStop -join "")
